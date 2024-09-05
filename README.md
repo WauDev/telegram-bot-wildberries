@@ -26,7 +26,7 @@ To get started with the Telegram Article Bot, follow these steps:
 
 3. **Set Up Environment Variables**
    ```bash
-  TELEGRAM_BOT_TOKEN=your-telegram-bot-token```
+  "TELEGRAM_BOT_TOKEN=your-telegram-bot-token"```
 
 4. **Run the Bot**
    ```bash
