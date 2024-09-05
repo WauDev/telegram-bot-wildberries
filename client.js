@@ -10,6 +10,12 @@ const databaseFilePath = path.join(__dirname, "database.json");
 // Создаем экземпляр бота
 const bot = new TelegramBot(token, { polling: true });
 
+// Проверяем, что токен присутствует
+if (!token) {
+  console.error("Токен не найден в переменных окружения!");
+  process.exit(1);
+} else console.log("Бот успешно запущен!");
+
 // Загружаем базу данных
 let database = { chats_id: {} };
 
@@ -231,14 +237,12 @@ async function processArticles(chatId, articles, senderId) {
 
 // Функция для обработки одного артикула
 async function processArticle(chatId, article, senderId) {
-  // Запускаем server.js и ждем данных для артикула
   GetCard(article);
 
   return new Promise((resolve, reject) => {
     dataEmitter.once("dataReady", async (data) => {
       try {
         if (data.error_article) {
-          // Если пришла ошибка
           await bot.sendMessage(
             chatId,
             `Ошибка, данные для артикула ${article} не были получены.`
@@ -246,14 +250,8 @@ async function processArticle(chatId, article, senderId) {
           return reject(new Error(`Ошибка данных для артикула ${article}`));
         }
 
-        console.log(
-          `Данные для артикула ${article} получены от server.js: ${JSON.stringify(
-            data
-          )}`
-        );
-
         // Получаем информацию о пользователе
-        let userLink = `@id${senderId}`; // Значение по умолчанию, если ничего не получим
+        let userLink = `@id${senderId}`; // Значение по умолчанию
         try {
           const userInfo = await bot.getChatMember(chatId, senderId);
           const user = userInfo.user;
@@ -268,13 +266,21 @@ async function processArticle(chatId, article, senderId) {
           console.error("Ошибка получения информации о пользователе:", error);
         }
 
-        // Проверяем данные и форматируем подпись
         const formattedSubjName = data.subj_root_name
           ? data.subj_root_name.replace(/ /g, "_")
           : "Неизвестная_подкатегория";
         const formattedsubjName = data.subj_name
           ? data.subj_name.replace(/ /g, "_")
           : "Неизвестная_подкатегория";
+
+        // Получаем цены и сортируем их по убыванию
+        const prices = data.prices;
+        const sortedPrices = Object.keys(prices)
+          .sort((a, b) => parseInt(b.match(/\d+/)) - parseInt(a.match(/\d+/))) // Сортируем по номеру в ключе priceN
+          .map((key) => prices[key]); // Извлекаем значения цен
+
+        const pricesText = sortedPrices.join("\n");
+
         const caption =
           `<a href="https://www.wildberries.ru/catalog/${article}/detail.aspx?targetUrl=SG">${
             data.imt_name || "Без названия"
@@ -282,24 +288,22 @@ async function processArticle(chatId, article, senderId) {
           `Категория: #${formattedsubjName}\n` +
           `Подкатегория: #${formattedSubjName}\n\n` +
           `Артикул: <code>${article}</code>\n` +
-          `Отправитель: ${userLink}`;
+          `Отправитель: ${userLink}\n\n` +
+          `Цены:\n${pricesText}`;
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
         if (chatData) {
           const threadId = chatData.threads_id[data.subj_name];
           if (threadId) {
-            // Если категория найдена, отправляем фото с сообщением в указанный топик
             await bot.sendPhoto(chatId, data.Image_Link, {
               caption: caption,
               message_thread_id: threadId,
               parse_mode: "HTML",
             });
           } else {
-            // Проверяем, нет ли уже активного процесса создания топика для этой категории
             if (!chatData.threads_id.hasOwnProperty(data.subj_name)) {
               try {
-                // Если категория не найдена, создаем новый топик
                 if (data.subj_name && data.subj_name.trim() !== "") {
                   const forumTopic = await bot.createForumTopic(
                     chatId,
@@ -309,24 +313,19 @@ async function processArticle(chatId, article, senderId) {
                       is_hidden: false,
                     }
                   );
-
-                  // Получаем номер нового топика и сохраняем его в базу
                   const newThreadId = forumTopic.message_thread_id;
                   chatData.threads_id[data.subj_name] = newThreadId;
                   saveDatabase();
-
-                  // Отправляем сообщение в новый топик
                   await bot.sendPhoto(chatId, data.Image_Link, {
                     caption: caption,
                     message_thread_id: newThreadId,
                     parse_mode: "HTML",
                   });
                 } else {
-                  let error_message =
-                    "Ошибка, данные для артикула " +
-                    article +
-                    " не были получены.";
-                  await bot.sendMessage(chatId, error_message);
+                  await bot.sendMessage(
+                    chatId,
+                    `Ошибка, данные для артикула ${article} не были получены.`
+                  );
                 }
               } catch (error) {
                 console.error("Ошибка создания топика:", error);
@@ -335,10 +334,6 @@ async function processArticle(chatId, article, senderId) {
                   "Не удалось создать новый топик для категории."
                 );
               }
-            } else {
-              console.log(
-                `Топик для категории "${data.subj_name}" уже создается или создан.`
-              );
             }
           }
         } else {
@@ -351,7 +346,7 @@ async function processArticle(chatId, article, senderId) {
         resolve();
       } catch (error) {
         console.error("Ошибка обработки данных:", error);
-        reject(error); // Отправляем ошибку для завершения обработки
+        reject(error);
       }
     });
 
