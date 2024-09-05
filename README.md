@@ -25,7 +25,7 @@ To get started with the Telegram Article Bot, follow these steps:
    npm install```
 
 3. **Set Up Environment Variables**
-Create a .env file in the root directory and add your Telegram bot token:
+## Create a .env file in the root directory and add your Telegram bot token:
    ```bash
   TELEGRAM_BOT_TOKEN=your-telegram-bot-token```
 
