@@ -12,15 +12,11 @@
 
 ```TELEGRAM_BOT_TOKEN=your-telegram-bot-token```
 
-4. Активация виртуального окружения
-
-```source venv/bin/activate```
-
-5. Установка зависимостей
+3. Установка зависимостей
 
 ```npm install moment node-telegram-bot-api```
 
-6. Запуск скрипта
+4. Запуск скрипта
 
 ```node client.js```
 
