@@ -35,6 +35,6 @@ Create a .env file in the root directory and add your Telegram bot token:
 
 ## Commands
 
-# /database - Displays database information for the current chat.
-# /addchat - Adds the current chat to the database (admin only).
-# /delchat - Removes the current chat from the database (admin only).
+## /database - Displays database information for the current chat.
+## /addchat - Adds the current chat to the database (admin only).
+## /delchat - Removes the current chat from the database (admin only).
