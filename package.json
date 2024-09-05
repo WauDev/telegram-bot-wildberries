@@ -1,0 +1,26 @@
+{
+  "name": "telegram-bot-wildberries",
+  "version": "1.0.0",
+  "description": "A Telegram bot designed to process and manage article numbers, handle requests, and maintain a database of chats and forum topics.",
+  "main": "client.js",
+  "scripts": {
+    "start": "node client.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WauDev/telegram-bot-wildberries.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "telegram",
+    "bot",
+    "article",
+    "processing"
+  ]
+}
