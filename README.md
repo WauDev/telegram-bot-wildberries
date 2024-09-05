@@ -34,6 +34,6 @@
 
 <!--описание команд-->
 ## Описание команд
- /chatadd
- /chatdel
- /database
+### /chatadd
+### /chatdel
+### /database
