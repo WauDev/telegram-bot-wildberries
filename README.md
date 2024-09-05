@@ -16,4 +16,10 @@ To get started with the Telegram Article Bot, follow these steps:
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/WauDev/telegram-bot-wildberries.git```
+   git clone https://github.com/WauDev/telegram-bot-wildberries.git
+
+ 2. **Install Dependencies**
+cd telegram-bot-wildberries
+npm install
+
+ 3.  
