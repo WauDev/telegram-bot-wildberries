@@ -1,36 +1,19 @@
-# Telegram Bot Wildberries
+- uses: Platane/snk@v3
+  with:
+    # github user name to read the contribution graph from (**required**)
+    # using action context var `github.repository_owner` or specified user
+    github_user_name: ${{ github.repository_owner }}
 
-A powerful Telegram bot designed to handle article numbers and manage related data in groups. This bot processes incoming articles, updates a database, and provides real-time progress updates to users.
-
-## Features
-
-- **Article Processing:** Handles articles sent in messages and processes them in a queue.
-- **Database Management:** Maintains a database of chats, threads, and articles.
-- **Real-time Updates:** Sends progress updates and handles errors gracefully.
-- **Admin Commands:** Allows admins to manage chat data with commands for adding and removing chats.
-
-## Getting Started
-
-To get started with the Telegram Article Bot, follow these steps:
-
-1. **Clone the Repository**
-
-   ```bash
-   git clone https://github.com/WauDev/telegram-bot-wildberries.git
-
- 2. **Install Dependencies**
-  ```bash
-cd telegram-bot-wildberries
-npm install
-
- 3.  **Set Up Environment Variables**
-   ```bash
-TELEGRAM_BOT_TOKEN=your-telegram-bot-token
-
-4.  **Run the Bot**
-   ```bash
-node client.js
- 
-
-
-
+    # list of files to generate.
+    # one file per line. Each output can be customized with options as query string.
+    #
+    #  supported options:
+    #  - palette:     A preset of color, one of [github, github-dark, github-light]
+    #  - color_snake: Color of the snake
+    #  - color_dots:  Coma separated list of dots color.
+    #                 The first one is 0 contribution, then it goes from the low contribution to the highest.
+    #                 Exactly 5 colors are expected.
+    outputs: |
+      dist/github-snake.svg
+      dist/github-snake-dark.svg?palette=github-dark
+      dist/ocean.gif?color_snake=orange&color_dots=#bfd6f6,#8dbdff,#64a1f4,#4b91f1,#3c7dd9
