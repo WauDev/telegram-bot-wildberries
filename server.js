@@ -1,12 +1,14 @@
-// server.js
 const https = require("https");
 const EventEmitter = require("events");
+const moment = require("moment"); // Use moment.js for date manipulation
+require("moment/locale/ru"); // Подключаем русскую локализацию для месяцев
+
 class DataEmitter extends EventEmitter {}
 const dataEmitter = new DataEmitter();
 
-// Флаги для включения/отключения вывода
+// Flags for enabling/disabling output
 const ENABLE_JSON_OUTPUT = false;
-const ENABLE_URL_OUTPUT = true;
+const ENABLE_URL_OUTPUT = false;
 
 const ServerBaseUrls = Array.from(
   { length: 18 },
@@ -106,13 +108,46 @@ function getAdditionalData(article) {
   });
 }
 
+async function fetchPriceHistory(article, urlInfo) {
+  const priceHistoryUrl = `https://basket-${urlInfo.server}.wbbasket.ru/vol${urlInfo.vol}/part${urlInfo.part}/${article}/info/price-history.json`;
+  const result = await checkUrl({
+    url: priceHistoryUrl,
+    server: urlInfo.server,
+    variant: 1,
+  });
+  console.log("Получаем цены");
+  if (result.data) {
+    return result.data;
+  }
+  console.log("Не удалось получить историю цен.");
+  return null;
+}
+
+function formatPrice(price) {
+  // Convert price from копейки to RUB format (e.g., 57231 -> 572.31)
+  return (price / 100).toFixed(2).replace(".", ",");
+}
+
+function extractPriceData(priceHistory) {
+  const recentPrices = [];
+  const now = moment();
+  const threeMonthsAgo = now.clone().subtract(3, "months");
+  priceHistory.forEach((record) => {
+    const date = moment.unix(record.dt);
+    if (date.isAfter(threeMonthsAgo)) {
+      recentPrices.push({ date, price: formatPrice(record.price.RUB) });
+    }
+  });
+  return recentPrices;
+}
+
 async function GetCard(article) {
   const urls = createUrls(article);
-
+  console.log("Начинаем подбирать basket ссылку");
   for (const urlInfo of urls) {
     const result = await checkUrl(urlInfo);
     if (result.data) {
-      // Сохраняем данные в глобальные переменные
+      // Save data to global variables
       global.imt_name = result.data.imt_name;
       global.subj_name = result.data.subj_name;
       global.subj_root_name = result.data.subj_root_name;
@@ -163,27 +198,42 @@ async function GetCard(article) {
         console.log("Не удалось получить данные о продуктах из второго API.");
       }
 
-      // Эмитируем событие с данными
-      dataEmitter.emit("dataReady", {
-        imt_name: global.imt_name,
-        subj_name: global.subj_name,
-        subj_root_name: global.subj_root_name,
-        brand: global.brand,
-        brandId: global.brandId,
-        supplier: global.supplier,
-        supplierId: global.supplierId,
-        Image_Link: global.Image_Link,
-      });
+      // Fetch and process price history
+      const priceHistory = await fetchPriceHistory(article, urlInfo);
+      if (priceHistory) {
+        const recentPrices = extractPriceData(priceHistory);
+        const formattedPrices = {};
 
-      return; // Остановиться на первой успешной ссылке
+        recentPrices.forEach((entry, index) => {
+          const date = entry.date.format("D MMM YYYY");
+          formattedPrices[`price${index + 1}`] = `${date}: ${entry.price}`;
+        });
+
+        console.log("Цены за последние 3 месяца:");
+        console.log(formattedPrices);
+
+        // Emit the formatted data
+        dataEmitter.emit("dataReady", {
+          imt_name: global.imt_name,
+          subj_name: global.subj_name,
+          subj_root_name: global.subj_root_name,
+          brand: global.brand,
+          brandId: global.brandId,
+          supplier: global.supplier,
+          supplierId: global.supplierId,
+          Image_Link: global.Image_Link,
+          prices: formattedPrices,
+        });
+
+        return; // Stop at the first successful link
+      }
+
+      // Emit event with error if no price data
+      dataEmitter.emit("dataReady", { article: global.error_article });
     }
   }
   console.log("Ни одна из ссылок не вернула успешный ответ.");
-  dataEmitter.emit("dataReady", {
-    article: global.error_article,
-  });
-  module.exports = { GetCard, dataEmitter };
+  dataEmitter.emit("dataReady", { article: global.error_article });
 }
 
-// Экспортируем эмиттер
 module.exports = { GetCard, dataEmitter };
