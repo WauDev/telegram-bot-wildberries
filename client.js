@@ -2,6 +2,15 @@ const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
+const pidFile = path.join(__dirname, 'bot.pid');
+
+// Записываем `pid` в файл
+fs.writeFileSync(pidFile, process.pid);
+
+// Обработчик завершения процесса
+process.on('exit', () => {
+    fs.unlinkSync(pidFile);
+});
 // client.js
 const VERSION = ['1.1.1 07.09.2024', '1.3.1 07.09.2024'];
 
