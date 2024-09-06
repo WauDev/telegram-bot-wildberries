@@ -4,7 +4,10 @@ const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
 const CLIENT_VERSION = "1.1.1 07.09.2024";
 const SERVER_VERSION = "1.3.1 07.09.2024";
-
+module.exports = {
+    CLIENT_VERSION,
+    SERVER_VERSION,
+};
 
 
 // Получаем токен из переменной окружения
