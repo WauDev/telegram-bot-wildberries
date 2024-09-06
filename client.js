@@ -21,8 +21,8 @@ if (!token) {
 } else {
 // Экспорт версий для использования в других файлах
 module.exports = { CLIENT_VERSION, SERVER_VERSION };
-  console.log("Бот успешно запущен!");
-}
+  
+};console.log("Бот успешно запущен!");
 
 // Загружаем базу данных
 let database = { chats_id: {} };
