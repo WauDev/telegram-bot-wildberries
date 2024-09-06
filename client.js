@@ -1,4 +1,6 @@
 const TelegramBot = require("node-telegram-bot-api");
+const fs = require("fs");
+const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
 
 // Получаем токен из переменной окружения
