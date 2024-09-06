@@ -2,12 +2,10 @@ const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
-
 const CLIENT_VERSION = "1.1.1 07.09.2024";
 const SERVER_VERSION = "1.1.1 07.09.2024";
 
-// Экспорт версий для использования в других файлах
-module.exports = { CLIENT_VERSION, SERVER_VERSION };
+
 
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -20,7 +18,10 @@ const bot = new TelegramBot(token, { polling: true });
 if (!token) {
   console.error("Токен не найден в переменных окружения!");
   process.exit(1);
-} else console.log("Бот успешно запущен!");
+} else {console.log("Бот успешно запущен!");
+// Экспорт версий для использования в других файлах
+module.exports = { CLIENT_VERSION, SERVER_VERSION };
+}
 
 // Загружаем базу данных
 let database = { chats_id: {} };
