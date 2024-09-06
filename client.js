@@ -5,7 +5,7 @@ const { GetCard, dataEmitter } = require("./server.js");
 const VERSION = ['1.1.1 07.09.2024', '1.3.1 07.09.2024'];
 
 module.exports = {
-    CLIENT_VERSION,
+    VERSION,
 };
 
 
