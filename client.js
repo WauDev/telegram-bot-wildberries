@@ -319,8 +319,3 @@ async function processArticle(chatId, article, senderId) {
 
 // Загрузка базы данных и запуск бота
 loadDatabase();
-
-module.exports = {
-  CLIENT_VERSION,
-  SERVER_VERSION,
-};
