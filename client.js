@@ -3,6 +3,12 @@ const fs = require("fs");
 const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
 
+const CLIENT_VERSION = "1.1.1 07.09.2024";
+const SERVER_VERSION = "1.1.1 07.09.2024";
+
+// Экспорт версий для использования в других файлах
+module.exports = { CLIENT_VERSION, SERVER_VERSION };
+
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const databaseFilePath = path.join(__dirname, "database.json");
