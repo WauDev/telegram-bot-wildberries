@@ -2,11 +2,10 @@ const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
-const global.CLIENT_VERSION = "1.1.1 07.09.2024";
-const global.SERVER_VERSION = "1.3.1 07.09.2024";
+const VERSION = ['1.1.1 07.09.2024', '1.3.1 07.09.2024'];
+
 module.exports = {
     CLIENT_VERSION,
-    SERVER_VERSION,
 };
 
 
