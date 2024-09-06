@@ -17,8 +17,8 @@ if (!token) {
   process.exit(1);
 } else console.log("Бот успешно запущен!");
 
-const CLIENT_VERSION = "1.3.0 06.09.2024";
-const SERVER_VERSION = "1.4.0 06.09.2024";
+const CLIENT_VERSION = "1.5.0 06.09.2024";
+const SERVER_VERSION = "1.6.0 06.09.2024";
 
 // Команда для получения информации о версиях и последнем обновлении
 bot.onText(/\/lastupdate/, async (msg) => {
