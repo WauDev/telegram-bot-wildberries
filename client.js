@@ -1,6 +1,3 @@
-const CLIENT_VERSION = "1.1.0 06.09.2024";
-const SERVER_VERSION = "1.1.0 06.09.2024";
-
 const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
@@ -20,6 +17,8 @@ if (!token) {
   process.exit(1);
 } else console.log("Бот успешно запущен!");
 
+const CLIENT_VERSION = "1.1.0 06.09.2024";
+const SERVER_VERSION = "1.1.0 06.09.2024";
 
 // Команда для получения информации о версиях и последнем обновлении
 bot.onText(/\/lastupdate/, async (msg) => {
