@@ -1,6 +1,4 @@
 const TelegramBot = require("node-telegram-bot-api");
-const fs = require("fs");
-const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
 
 // Получаем токен из переменной окружения
@@ -289,7 +287,7 @@ async function processArticle(chatId, article, senderId) {
           `Подкатегория: #${formattedSubjName}\n\n` +
           `Артикул: <code>${article}</code>\n` +
           `Отправитель: ${userLink}\n\n` +
-          `Цены:\n${pricesText}`;
+          `Предыдущие цены :\n${pricesText}`;
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
