@@ -1,3 +1,6 @@
+const CLIENT_VERSION = "1.1.0 06.09.2024";
+const SERVER_VERSION = "1.1.0 06.09.2024";
+
 const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
@@ -16,6 +19,28 @@ if (!token) {
   console.error("Токен не найден в переменных окружения!");
   process.exit(1);
 } else console.log("Бот успешно запущен!");
+
+
+// Команда для получения информации о версиях и последнем обновлении
+bot.onText(/\/lastupdate/, async (msg) => {
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  if (await isAdmin(chatId, userId)) {
+    const [clientVersion, clientUpdateDate] = CLIENT_VERSION.split(" ");
+    const [serverVersion, serverUpdateDate] = SERVER_VERSION.split(" ");
+
+    const response = `Текущая версия клиента: ${clientVersion}\n` +
+                     `Текущая версия сервера: ${serverVersion}\n\n` +
+                     `Последнее обновление клиента: ${clientUpdateDate}\n` +
+                     `Последнее обновление сервера: ${serverUpdateDate}`;
+
+    await bot.sendMessage(chatId, response);
+  } else {
+    await bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
+  }
+});
+
 
 // Загружаем базу данных
 let database = { chats_id: {} };
