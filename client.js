@@ -19,10 +19,10 @@ if (!token) {
   console.error("Токен не найден в переменных окружения!");
   process.exit(1);
 } else {
+  console.log("Бот успешно запущен!");
 // Экспорт версий для использования в других файлах
 module.exports = { CLIENT_VERSION, SERVER_VERSION };
-  
-};console.log("Бот успешно запущен!");
+};
 
 // Загружаем базу данных
 let database = { chats_id: {} };
