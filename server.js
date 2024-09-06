@@ -8,8 +8,8 @@ class DataEmitter extends EventEmitter {}
 const dataEmitter = new DataEmitter();
 
 // Flags for enabling/disabling output
-const ENABLE_JSON_OUTPUT = false;
-const ENABLE_URL_OUTPUT = false;
+const ENABLE_JSON_OUTPUT = true;
+const ENABLE_URL_OUTPUT = true;
 
 const ServerBaseUrls = Array.from(
   { length: 18 },
