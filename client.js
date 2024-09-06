@@ -21,13 +21,9 @@ const CLIENT_VERSION = "1.3.0 06.09.2024";
 const SERVER_VERSION = "1.3.0 06.09.2024";
 
 module.exports = {
-  SERVER_VERSION
+    CLIENT_VERSION,
+    SERVER_VERSION
 };
-
-module.exports = {
-  CLIENT_VERSION,
-};
-
 
 // Команда для получения информации о версиях и последнем обновлении
 bot.onText(/\/lastupdate/, async (msg) => {
