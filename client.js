@@ -4,7 +4,7 @@ const path = require('path');
 const { GetCard, dataEmitter } = require('./server.js');
 
 // Версия клиента
-const VERSION = "1.1.1 07.09.2024";
+const VERSION = "1.2.1 07.09.2024";
 
 // Флаг автообновления
 const AUTO_UPDATE = true;
