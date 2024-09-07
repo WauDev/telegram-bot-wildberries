@@ -1,25 +1,9 @@
+const VERSION = ['1.1.1 07.09.2024', '1.3.1 07.09.2024'];
+
 const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
 const { GetCard, dataEmitter } = require("./server.js");
-const pidFile = path.join(__dirname, 'bot.pid');
-
-
-// client.js
-const VERSION = ['1.1.1 07.09.2024', '1.3.1 07.09.2024'];
-
-// Экспортируем версии
-const [CLIENT_VERSION, SERVER_VERSION] = VERSION;
-
-module.exports = {
-    CLIENT_VERSION,
-    SERVER_VERSION,
-    VERSION
-};
-
-
-
-
 
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
