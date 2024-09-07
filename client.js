@@ -1,5 +1,4 @@
-const CLIENT_VERSION = '1.1.1 07.09.2024'
-const SERVER_VERSION = '1.1.1 07.09.2024'
+
 
 const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
