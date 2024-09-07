@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { GetCard, dataEmitter } = require("./server.js");
 
-const VERSION = "1.1.1 07.09.2024";
+const VERSION = "1.2.1 07.09.2024";
 const VERSION_CHECK_URL = 'https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js';
 
 // Переменные для управления состоянием обновления
