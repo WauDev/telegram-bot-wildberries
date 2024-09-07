@@ -1,7 +1,6 @@
 const CLIENT_VERSION = '1.1.1 07.09.2024'
 const SERVER_VERSION = '1.1.1 07.09.2024'
-console.log(`Версия клиента: ${CLIENT_VERSION}`);
-console.log(`Версия сервера: ${SERVER_VERSION}`);
+
 const TelegramBot = require("node-telegram-bot-api");
 const fs = require("fs");
 const path = require("path");
