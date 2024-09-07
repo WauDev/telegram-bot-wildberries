@@ -19,8 +19,6 @@ if (!token) {
   process.exit(1);
 } else {
   console.log("Бот успешно запущен!");
-// Экспорт версий для использования в других файлах
-module.exports = { CLIENT_VERSION, SERVER_VERSION };
 };
 
 // Загружаем базу данных
