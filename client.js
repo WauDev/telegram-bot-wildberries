@@ -374,4 +374,5 @@ async function processArticle(chatId, article, senderId) {
 });
 }
 
-// Инициализация базы данных loadDatabase();
+// Инициализация базы данных 
+loadDatabase();
