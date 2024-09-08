@@ -81,7 +81,8 @@ function notifyUpdate(newVersion) {
   // Дожидаемся завершения всех задач в очереди
   processQueue(() => {
     console.log('Очередь завершена, бот завершает работу для обновления.');
-    exec("kill -s SIGHUP $(pgrep -f update)", (error, stdout, stderr) => {
+    // ТУТ МЕНЯТЬ
+    exec("kill -s SIGHUP $(ps -ef | grep update | awk 'NR==1 {print $2}')", (error, stdout, stderr) => {
       if (error) {
         console.error(`Ошибка завершения процесса: ${error.message}`);
       } else {
