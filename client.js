@@ -1,6 +1,9 @@
+const VERSION = "1.1.1";
+const NEW_VERSION_URL = "https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js"; // URL для проверки обновлений
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 const { GetCard, dataEmitter } = require('./server.js');
 
 // Получаем токен из переменной окружения
@@ -14,7 +17,7 @@ const bot = new TelegramBot(token, { polling: true });
 if (!token) {
   console.error('Токен не найден в переменных окружения!');
   process.exit(1);
-} else console.log("Бот успешно запущен!")
+} else console.log("Бот успешно запущен!");
 
 // Загружаем базу данных
 let database = { "chats_id": {} };
@@ -36,113 +39,66 @@ function saveDatabase() {
 // Очередь сообщений для обработки
 const messageQueue = [];
 let isProcessing = false;
+let isUpdateDetected = false; // Флаг обновления
 
-// Обрабатываем команды
-bot.onText(/\/database/, (msg) => {
-  const chatId = msg.chat.id;
-  const chatData = database.chats_id[chatId];
-  if (chatData) {
-    let response = `Данные для чата ${chatId}:\n`;
-    response += `Имя группы: ${chatData.name}\n`;
-    response += `Категории и ID тем:\n`;
-    for (const [category, threadId] of Object.entries(chatData.threads_id)) {
-      response += `- ${category}: ${threadId}\n`;
-    }
-    bot.sendMessage(chatId, response);
-  } else {
-    bot.sendMessage(chatId, `Данные для чата ${chatId} не найдены.`);
-  }
-});
+// Функция для загрузки кода и получения новой версии
+function checkForUpdates() {
+  https.get(NEW_VERSION_URL, (res) => {
+    let data = '';
 
-// Функция для проверки, является ли пользователь администратором
-async function isAdmin(chatId, userId) {
-  try {
-    const chatMember = await bot.getChatMember(chatId, userId);
-    return chatMember.status === 'administrator' || chatMember.status === 'creator';
-  } catch (error) {
-    console.error('Ошибка получения информации о пользователе:', error);
-    return false;
-  }
+    res.on('data', chunk => {
+      data += chunk;
+    });
+
+    res.on('end', () => {
+      const versionMatch = data.match(/const VERSION = "([\d.]+)"/);
+      if (versionMatch) {
+        const NEW_VERSION = versionMatch[1];
+        console.log(`Текущая версия: ${VERSION}, Новая версия: ${NEW_VERSION}`);
+
+        if (NEW_VERSION > VERSION) {
+          isUpdateDetected = true;
+          notifyUpdate(NEW_VERSION);
+        }
+      }
+    });
+  }).on('error', (err) => {
+    console.error('Ошибка при загрузке новой версии:', err.message);
+  });
 }
 
-// Команда для добавления чата в базу данных
-bot.onText(/\/addchat/, async (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
+// Функция для уведомления об обновлении
+function notifyUpdate(newVersion) {
+  // Уведомляем во всех чатах
+  for (const chatId of Object.keys(database.chats_id)) {
+    bot.sendMessage(chatId, `Доступна новая версия: ${newVersion}. Бот завершит работу для обновления.`);
+  }
+
+  // Останавливаем прием новых сообщений
+  bot.removeTextListener(/./);
   
-  if (await isAdmin(chatId, userId)) {
-    const chatData = database.chats_id[chatId];
-    
-    if (chatData) {
-      bot.sendMessage(chatId, `Чат ${chatId} уже существует в базе данных.`);
-    } else {
-      const chatName = msg.chat.title || 'Неизвестная группа';
-      database.chats_id[chatId] = {
-        name: chatName,
-        threads_id: {}
-      };
-      saveDatabase();
-      bot.sendMessage(chatId, `Чат ${chatId} добавлен в базу данных.`);
+  // Дожидаемся завершения всех задач в очереди
+  processQueue(() => {
+    console.log('Очередь завершена, бот завершает работу для обновления.');
+    killOldProcess();
+  });
+}
+
+// Функция для завершения работы старого процесса
+function killOldProcess() {
+  const exec = require('child_process').exec;
+  exec("kill -s SIGHUP $(ps -ef | grep update | awk 'NR==1 {print $2}')", (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Ошибка завершения процесса: ${error.message}`);
     }
-  } else {
-    bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
-  }
-});
-
-// Команда для удаления чата из базы данных
-bot.onText(/\/delchat/, async (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  
-  if (await isAdmin(chatId, userId)) {
-    if (database.chats_id[chatId]) {
-      delete database.chats_id[chatId];
-      saveDatabase();
-      bot.sendMessage(chatId, `Чат ${chatId} удален из базы данных.`);
-    } else {
-      bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
-    }
-  } else {
-    bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
-  }
-});
-
-
-// Основная логика для артикулов
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
-  const messageText = msg.text || '';
-  const senderId = msg.from.id;
-
-  // Проверяем, есть ли артикулы в сообщении
-   // Проверяем, является ли сообщение личным
-  if (msg.chat.type === 'private') {
-    bot.sendMessage(chatId, `Привет! Этот бот работает только в группах. Пожалуйста, добавьте меня в группу и предоставьте права администратора.`);
-    return;
-  }
-  
-  const articleMatches = messageText.match(/\b\d{5,}\b/g); // Ищем все числа от 5 и более цифр
-
-  if (articleMatches && articleMatches.length > 0) {
-    if (isProcessing) {
-      // Отправляем сообщение об очереди
-      bot.sendMessage(chatId, "Ваш запрос добавлен в очередь, ожидайте.").then((queueMessage) => {
-        // Добавляем сообщение в очередь с информацией о сообщении об очереди и message_id сообщения пользователя
-        messageQueue.push({ chatId, articleMatches, senderId, queueMessageId: queueMessage.message_id, userMessageId: msg.message_id });
-        processQueue();
-      });
-    } else {
-      // Если очередь пуста, сразу обрабатываем
-      messageQueue.push({ chatId, articleMatches, senderId, userMessageId: msg.message_id });
-      processQueue();
-    }
-  }
-});
+  });
+}
 
 // Функция для обработки очереди
-async function processQueue() {
+async function processQueue(callback) {
   if (isProcessing || messageQueue.length === 0) {
-    return; // Если уже идет процесс обработки или очередь пуста
+    if (callback) callback();
+    return;
   }
 
   isProcessing = true;
@@ -171,7 +127,7 @@ async function processQueue() {
   }
 
   isProcessing = false;
-  processQueue(); // Продолжаем обработку следующего сообщения в очереди
+  processQueue(callback); // Продолжаем обработку следующего сообщения в очереди
 }
 
 // Функция для обработки всех артикулов в сообщении
@@ -265,48 +221,31 @@ async function processArticle(chatId, article, senderId) {
             if (!chatData.threads_id.hasOwnProperty(data.subj_name)) {
               try {
                 if (data.subj_name && data.subj_name.trim() !== '') {
-                  const forumTopic = await bot.createForumTopic(chatId, data.subj_name, {
-                    is_closed: false,
-                    is_hidden: false
-                  });
-                  const newThreadId = forumTopic.message_thread_id;
-                  chatData.threads_id[data.subj_name] = newThreadId;
+                  const createdThread = await bot.createForumTopic(chatId, data.subj_name);
+                  chatData.threads_id[data.subj_name] = createdThread.message_thread_id;
                   saveDatabase();
                   await bot.sendPhoto(chatId, data.Image_Link, {
                     caption: caption,
-                    message_thread_id: newThreadId,
+                    message_thread_id: createdThread.message_thread_id,
                     parse_mode: 'HTML'
                   });
-                } else {
-                  await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
                 }
               } catch (error) {
-                console.error('Ошибка создания топика:', error);
-                await bot.sendMessage(chatId, 'Не удалось создать новый топик для категории.');
+                console.error('Ошибка при создании новой темы форума:', error);
               }
             }
           }
-        } else {
-          await bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
         }
-
         resolve();
       } catch (error) {
-        console.error('Ошибка обработки данных:', error);
         reject(error);
       }
-    });
-
-    dataEmitter.once('error', async (error) => {
-      await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
-      reject(error);
     });
   });
 }
 
-
-
-
-
 // Инициализация базы данных
 loadDatabase();
+
+// Запускаем проверку на обновления каждую минуту
+setInterval(checkForUpdates, 60 * 1000);
