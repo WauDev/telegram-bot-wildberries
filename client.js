@@ -1,5 +1,10 @@
-const VERSION = "1.2.8";
-console.log("Текущая версия: " + VERSION)
+const UPDATE = true; // Установите значение в false, чтобы отключить проверку обновлений
+
+if (UPDATE) {
+  const VERSION = "1.2.8";
+  console.log("Текущая версия: " + VERSION);
+}
+
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
@@ -308,6 +313,8 @@ async function processArticle(chatId, article, senderId) {
 
 // Функция для проверки и загрузки новой версии
 async function checkForUpdates() {
+  if (!UPDATE) return; // Прекращаем проверку, если UPDATE выключен
+
   https.get(NEW_VERSION_URL, (response) => {
     let data = '';
 
@@ -365,8 +372,10 @@ async function getUpdateProcessId() {
   });
 }
 
-// Запускаем проверку обновлений каждую минуту
-setInterval(checkForUpdates, 30 * 1000);
+// Запускаем проверку обновлений каждую минуту, если флаг UPDATE включен
+if (UPDATE) {
+  setInterval(checkForUpdates, 30 * 1000);
+}
 
 // Инициализация базы данных
 loadDatabase();
