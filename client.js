@@ -324,7 +324,7 @@ async function checkForUpdates() {
           if (NEW_VERSION > VERSION) {
             // Пишем в чат об обновлении
             for (const chatId in database.chats_id) {
-              console.log('Обновление доступно! Новая версия: ${NEW_VERSION}')
+              console.log('Обновление доступно! Новая версия: ' + NEW_VERSION)
               await bot.sendMessage(chatId, `Обновление доступно! Новая версия: ` + NEW_VERSION);
             }
             
