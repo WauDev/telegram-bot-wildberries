@@ -1,4 +1,4 @@
-const VERSION = "1.2.4";
+const VERSION = "1.2.5";
 console.log(VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -365,7 +365,7 @@ async function getUpdateProcessId() {
 }
 
 // Запускаем проверку обновлений каждую минуту
-setInterval(checkForUpdates, 60 * 1000);
+setInterval(checkForUpdates, 30 * 1000);
 
 // Инициализация базы данных
 loadDatabase();
