@@ -1,4 +1,4 @@
-const VERSION = "1.2.2";
+const VERSION = "1.2.3";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -251,7 +251,7 @@ async function processArticle(chatId, article, senderId) {
                         `Подкатегория: #${formattedSubjName}\n\n` +
                         `Артикул: <code>${article}</code>\n` +
                         `Отправитель: ${userLink}\n\n` +
-                        `Предыдущие цены :\n${pricesText}`;
+                        `Предыдущие цены:\n${pricesText}`;
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
@@ -325,7 +325,7 @@ async function checkForUpdates() {
             // Пишем в чат об обновлении
             for (const chatId in database.chats_id) {
               console.log('Обновление доступно! Новая версия: ' + NEW_VERSION)
-              await bot.sendMessage(chatId, `Обновление доступно! Новая версия: ${NEW_VERSION}`);
+              await bot.sendMessage(chatId, `Обновление доступно!/n Новая версия: ${NEW_VERSION}/n Перезагрузка сервера!`);
             }
             
             // Прекращаем принимать заказы в очередь
