@@ -1,15 +1,13 @@
-const VERSION = "1.2.1"; // Текущая версия
-const NEW_VERSION_URL = "https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js";
+const VERSION = '1.1.1 07.09.2024';
+const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
-const TelegramBot = require('node-telegram-bot-api');
 const { GetCard, dataEmitter } = require('./server.js');
+const https = require('https');
 
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const databaseFilePath = path.join(__dirname, 'database.json');
-const newVersionFilePath = path.join(__dirname, 'client.js.new');
 
 // Создаем экземпляр бота
 const bot = new TelegramBot(token, { polling: true });
@@ -23,17 +21,16 @@ if (!token) {
 // Загружаем базу данных
 let database = { "chats_id": {} };
 
-// Функция для загрузки базы данных
 function loadDatabase() {
   if (fs.existsSync(databaseFilePath)) {
     const rawData = fs.readFileSync(databaseFilePath);
     database = JSON.parse(rawData);
   } else {
+    // Если файл не существует, создаем пустую базу данных
     fs.writeFileSync(databaseFilePath, JSON.stringify(database, null, 2));
   }
 }
 
-// Функция для сохранения базы данных
 function saveDatabase() {
   fs.writeFileSync(databaseFilePath, JSON.stringify(database, null, 2));
 }
@@ -42,32 +39,67 @@ function saveDatabase() {
 const messageQueue = [];
 let isProcessing = false;
 
-// Обрабатываем команды
-bot.onText(/\/database/, (msg) => {
-  const chatId = msg.chat.id;
-  const chatData = database.chats_id[chatId];
-  if (chatData) {
-    let response = `Данные для чата ${chatId}:\n`;
-    response += `Имя группы: ${chatData.name}\n`;
-    response += `Категории и ID тем:\n`;
-    for (const [category, threadId] of Object.entries(chatData.threads_id)) {
-      response += `- ${category}: ${threadId}\n`;
-    }
-    bot.sendMessage(chatId, response);
-  } else {
-    bot.sendMessage(chatId, `Данные для чата ${chatId} не найдены.`);
-  }
-});
+// URL для проверки новой версии
+const NEW_VERSION_URL = 'https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js';
 
-// Функция для проверки, является ли пользователь администратором
-async function isAdmin(chatId, userId) {
+// Функция проверки обновлений
+async function checkForUpdates() {
   try {
-    const chatMember = await bot.getChatMember(chatId, userId);
-    return chatMember.status === 'administrator' || chatMember.status === 'creator';
+    https.get(NEW_VERSION_URL, (response) => {
+      let data = '';
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => {
+        const newVersionMatch = data.match(/const VERSION = "([^"]+)"/);
+        if (newVersionMatch) {
+          const NEW_VERSION = newVersionMatch[1];
+          if (NEW_VERSION !== VERSION) {
+            sendUpdateNotification('Обновление доступно! Бот перезагрузится после завершения текущих задач.');
+            stopProcessingNewTasks();
+            waitForQueueToFinish().then(() => {
+              // Завершаем старый процесс
+              const updateProcesses = execSync('ps -ef | grep update | awk \'NR==1 {print $2}\'').toString().trim();
+              if (updateProcesses) {
+                execSync(`kill -s SIGHUP ${updateProcesses}`);
+              }
+            });
+          }
+        }
+      });
+    });
   } catch (error) {
-    console.error('Ошибка получения информации о пользователе:', error);
-    return false;
+    console.error('Ошибка при проверке обновлений:', error);
   }
+}
+
+// Функция отправки уведомления в каждый чат
+async function sendUpdateNotification(message) {
+  for (const chatId of Object.keys(database.chats_id)) {
+    try {
+      await bot.sendMessage(chatId, message);
+    } catch (error) {
+      console.error(`Ошибка отправки сообщения в чат ${chatId}:`, error);
+    }
+  }
+}
+
+// Функция остановки принятия новых задач
+function stopProcessingNewTasks() {
+  console.log('Новые задачи не принимаются, ждем завершения текущих.');
+  isProcessing = true;
+}
+
+// Функция ожидания завершения очереди
+function waitForQueueToFinish() {
+  return new Promise(resolve => {
+    const checkQueue = () => {
+      if (!isProcessing && messageQueue.length === 0) {
+        resolve();
+      } else {
+        setTimeout(checkQueue, 1000); // Проверяем каждые 1 секунду
+      }
+    };
+    checkQueue();
+  });
 }
 
 // Команда для добавления чата в базу данных
@@ -118,6 +150,8 @@ bot.on('message', (msg) => {
   const messageText = msg.text || '';
   const senderId = msg.from.id;
 
+  // Проверяем, есть ли артикулы в сообщении
+   // Проверяем, является ли сообщение личным
   if (msg.chat.type === 'private') {
     bot.sendMessage(chatId, `Привет! Этот бот работает только в группах. Пожалуйста, добавьте меня в группу и предоставьте права администратора.`);
     return;
@@ -127,11 +161,14 @@ bot.on('message', (msg) => {
 
   if (articleMatches && articleMatches.length > 0) {
     if (isProcessing) {
+      // Отправляем сообщение об очереди
       bot.sendMessage(chatId, "Ваш запрос добавлен в очередь, ожидайте.").then((queueMessage) => {
+        // Добавляем сообщение в очередь с информацией о сообщении об очереди и message_id сообщения пользователя
         messageQueue.push({ chatId, articleMatches, senderId, queueMessageId: queueMessage.message_id, userMessageId: msg.message_id });
         processQueue();
       });
     } else {
+      // Если очередь пуста, сразу обрабатываем
       messageQueue.push({ chatId, articleMatches, senderId, userMessageId: msg.message_id });
       processQueue();
     }
@@ -141,12 +178,13 @@ bot.on('message', (msg) => {
 // Функция для обработки очереди
 async function processQueue() {
   if (isProcessing || messageQueue.length === 0) {
-    return;
+    return; // Если уже идет процесс обработки или очередь пуста
   }
 
   isProcessing = true;
-  const { chatId, articleMatches, senderId, queueMessageId, userMessageId } = messageQueue.shift();
+  const { chatId, articleMatches, senderId, queueMessageId, userMessageId } = messageQueue.shift(); // Извлекаем первый элемент из очереди
 
+  // Удаляем сообщение "Ваш запрос добавлен в очередь", если оно было
   if (queueMessageId) {
     try {
       await bot.deleteMessage(chatId, queueMessageId);
@@ -155,6 +193,7 @@ async function processQueue() {
     }
   }
 
+  // Удаляем сообщение пользователя с артикулами
   try {
     await bot.deleteMessage(chatId, userMessageId);
   } catch (error) {
@@ -168,7 +207,7 @@ async function processQueue() {
   }
 
   isProcessing = false;
-  processQueue();
+  processQueue(); // Продолжаем обработку следующего сообщения в очереди
 }
 
 // Функция для обработки всех артикулов в сообщении
@@ -176,12 +215,15 @@ async function processArticles(chatId, articles, senderId) {
   const totalArticles = articles.length;
   let completedArticles = 0;
 
+  // Создаем сообщение о прогрессе
   let progressMessage = await bot.sendMessage(chatId, `Выполняется: ${articles[0]}\n\nВыполнено 0%\nОсталось ${totalArticles - completedArticles} из ${totalArticles}`);
 
   for (const article of articles) {
     try {
       await processArticle(chatId, article, senderId);
       completedArticles++;
+
+      // Обновляем сообщение о прогрессе
       const percentComplete = Math.floor((completedArticles / totalArticles) * 100);
       await bot.editMessageText(
         `Выполняется: ${article}\n\nВыполнено ${percentComplete}%\nОсталось ${totalArticles - completedArticles} из ${totalArticles}`, 
@@ -190,138 +232,35 @@ async function processArticles(chatId, articles, senderId) {
     } catch (error) {
       console.error(`Ошибка обработки артикула ${article}:`, error);
       await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
+      // Прерываем обработку текущих артикулов
       break;
     }
   }
 
+  // Удаляем сообщение, когда все артикулы обработаны или произошла ошибка
   await bot.deleteMessage(chatId, progressMessage.message_id);
 }
 
 // Функция для обработки одного артикула
 async function processArticle(chatId, article, senderId) {
-  GetCard(article);
-
   return new Promise((resolve, reject) => {
-    dataEmitter.once('dataReady', async (data) => {
-      try {
-        if (data.error_article) {
-          await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
-          return reject(new Error(`Ошибка данных для артикула ${article}`));
-        }
-
-        let userLink = `@id${senderId}`;
-        try {
-          const userInfo = await bot.getChatMember(chatId, senderId);
-          const user = userInfo.user;
-          if (user.username) {
-            userLink = `<a href="https://t.me/${user.username}">${user.first_name}</a>`;
-          } else if (user.first_name) {
-            userLink = `<a href="https://t.me/${senderId}">${user.first_name}</a>`;
-          } else {
-            userLink = `<a href="https://t.me/${senderId}">User ${senderId}</a>`;
-          }
-        } catch (error) {
-          console.error('Ошибка получения информации о пользователе:', error);
-        }
-
-        const formattedSubjName = data.subj_root_name ? data.subj_root_name.replace(/ /g, '_') : 'Неизвестная_подкатегория';
-        const formattedsubjName = data.subj_name ? data.subj_name.replace(/ /g, '_') : 'Неизвестная_подкатегория';
-
-        const prices = data.prices;
-        const sortedPrices = Object.keys(prices)
-          .sort((a, b) => parseInt(b.match(/\d+/)) - parseInt(a.match(/\d+/)))
-          .map(key => prices[key]);
-
-        const pricesText = sortedPrices.join('\n');
-
-        const caption = `<a href="https://www.wildberries.ru/catalog/${article}/detail.aspx?targetUrl=SG">${data.imt_name || 'Без названия'}</a>\n\n` +
-                        `Категория: #${formattedsubjName}\n` +
-                        `Подкатегория: #${formattedSubjName}\n\n` +
-                        `Артикул: <code>${article}</code>\n` +
-                        `Отправитель: ${userLink}\n\n` +
-                        `Предыдущие цены :\n${pricesText}`;
-
-        const chatData = database.chats_id[chatId];
-        if (chatData) {
-          const threadId = chatData.threads_id[data.subj_name];
-          if (threadId) {
-            await bot.sendPhoto(chatId, data.Image_Link, {
-              caption: caption,
-              message_thread_id: threadId,
-              parse_mode: 'HTML'
-            });
-          } else {
-            if (!chatData.threads_id.hasOwnProperty(data.subj_name)) {
-              try {
-                if (data.subj_name && data.subj_name.trim() !== '') {
-                  const forumTopic = await bot.createForumTopic(chatId, data.subj_name, {
-                    is_closed: false,
-                    is_hidden: false
-                  });
-                  const newThreadId = forumTopic.message_thread_id;
-                  chatData.threads_id[data.subj_name] = newThreadId;
-                  saveDatabase();
-                  await bot.sendPhoto(chatId, data.Image_Link, {
-                    caption: caption,
-                    message_thread_id: newThreadId,
-                    parse_mode: 'HTML'
-                  });
-                } else {
-                  await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
-                }
-              } catch (error) {
-                console.error('Ошибка создания топика:', error);
-                await bot.sendMessage(chatId, 'Не удалось создать новый топик для категории.');
-              }
-            }
-          }
-        } else {
-          await bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
-        }
-
+    const requestData = { id: senderId, art: article };
+    
+    dataEmitter.once('data', (data) => {
+      if (data && data.error) {
+        reject(new Error(data.error));
+      } else {
+        bot.sendMessage(chatId, data);
         resolve();
-      } catch (error) {
-        console.error('Ошибка обработки данных:', error);
-        reject(error);
       }
     });
 
-    dataEmitter.once('error', async (error) => {
-      await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
-      reject(error);
-    });
+    GetCard(requestData);
   });
 }
 
-// Функция для проверки обновлений
-async function checkForUpdates() {
-  try {
-    const response = await axios.get(NEW_VERSION_URL);
-    const newVersionCode = response.data;
-    const newVersionMatch = newVersionCode.match(/const VERSION = "([^"]+)"/);
-    if (newVersionMatch) {
-      const NEW_VERSION = newVersionMatch[1];
-      if (NEW_VERSION !== VERSION) {
-        bot.sendMessage(/* chatId */, 'Обновление доступно! Бот перезагрузится после завершения текущих задач.');
-        // Прекращаем принимать новые заказы
-        // Ждем выполнения всех задач в очереди
-        while (isProcessing || messageQueue.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        // Завершаем текущий процесс
-        const updateProcesses = (await exec('ps -ef | grep update | awk \'NR==1 {print $2}\'')).trim();
-        if (updateProcesses) {
-          await exec(`kill -s SIGHUP ${updateProcesses}`);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Ошибка при проверке обновлений:', error);
-  }
-}
+// Проверяем обновления каждую минуту
+setInterval(checkForUpdates, 60000);
 
-// Запускаем проверку обновлений каждую минуту
-setInterval(checkForUpdates, 60 * 1000);
-
-// Инициализация базы данных
+// Загрузка базы данных при запуске
 loadDatabase();
