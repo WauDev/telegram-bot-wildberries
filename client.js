@@ -1,10 +1,5 @@
-const UPDATE = true; // Установите значение в false, чтобы отключить проверку обновлений
-
-if (UPDATE) {
-  const VERSION = "1.2.9";
-  console.log("Текущая версия: " + VERSION);
-}
-
+const VERSION = "1.2.4";
+console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
@@ -51,15 +46,15 @@ bot.onText(/\/database/, (msg) => {
   const chatId = msg.chat.id;
   const chatData = database.chats_id[chatId];
   if (chatData) {
-    let response = `Данные для чата ${chatId}:\n`;
-    response += `Имя группы: ${chatData.name}\n`;
-    response += `Категории и ID тем:\n`;
+    let response = Данные для чата ${chatId}:\n;
+    response += Имя группы: ${chatData.name}\n;
+    response += Категории и ID тем:\n;
     for (const [category, threadId] of Object.entries(chatData.threads_id)) {
-      response += `- ${category}: ${threadId}\n`;
+      response += - ${category}: ${threadId}\n;
     }
     bot.sendMessage(chatId, response);
   } else {
-    bot.sendMessage(chatId, `Данные для чата ${chatId} не найдены.`);
+    bot.sendMessage(chatId, Данные для чата ${chatId} не найдены.);
   }
 });
 
@@ -83,7 +78,7 @@ bot.onText(/\/addchat/, async (msg) => {
     const chatData = database.chats_id[chatId];
     
     if (chatData) {
-      bot.sendMessage(chatId, `Чат ${chatId} уже существует в базе данных.`);
+      bot.sendMessage(chatId, Чат ${chatId} уже существует в базе данных.);
     } else {
       const chatName = msg.chat.title || 'Неизвестная группа';
       database.chats_id[chatId] = {
@@ -91,10 +86,10 @@ bot.onText(/\/addchat/, async (msg) => {
         threads_id: {}
       };
       saveDatabase();
-      bot.sendMessage(chatId, `Чат ${chatId} добавлен в базу данных.`);
+      bot.sendMessage(chatId, Чат ${chatId} добавлен в базу данных.);
     }
   } else {
-    bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
+    bot.sendMessage(chatId, У вас нет прав для выполнения этой команды.);
   }
 });
 
@@ -107,12 +102,12 @@ bot.onText(/\/delchat/, async (msg) => {
     if (database.chats_id[chatId]) {
       delete database.chats_id[chatId];
       saveDatabase();
-      bot.sendMessage(chatId, `Чат ${chatId} удален из базы данных.`);
+      bot.sendMessage(chatId, Чат ${chatId} удален из базы данных.);
     } else {
-      bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
+      bot.sendMessage(chatId, Чат ${chatId} не найден в базе данных.);
     }
   } else {
-    bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
+    bot.sendMessage(chatId, У вас нет прав для выполнения этой команды.);
   }
 });
 
@@ -124,7 +119,7 @@ bot.on('message', (msg) => {
 
   // Проверяем, есть ли артикулы в сообщении
   if (msg.chat.type === 'private') {
-    bot.sendMessage(chatId, `Привет! Этот бот работает только в группах. Пожалуйста, добавьте меня в группу и предоставьте права администратора.`);
+    bot.sendMessage(chatId, Привет! Этот бот работает только в группах. Пожалуйста, добавьте меня в группу и предоставьте права администратора.);
     return;
   }
   
@@ -187,7 +182,7 @@ async function processArticles(chatId, articles, senderId) {
   let completedArticles = 0;
 
   // Создаем сообщение о прогрессе
-  let progressMessage = await bot.sendMessage(chatId, `Выполняется: ${articles[0]}\n\nВыполнено 0%\nОсталось ${totalArticles - completedArticles} из ${totalArticles}`);
+  let progressMessage = await bot.sendMessage(chatId, Выполняется: ${articles[0]}\n\nВыполнено 0%\nОсталось ${totalArticles - completedArticles} из ${totalArticles});
 
   for (const article of articles) {
     try {
@@ -197,12 +192,12 @@ async function processArticles(chatId, articles, senderId) {
       // Обновляем сообщение о прогрессе
       const percentComplete = Math.floor((completedArticles / totalArticles) * 100);
       await bot.editMessageText(
-        `Выполняется: ${article}\n\nВыполнено ${percentComplete}%\nОсталось ${totalArticles - completedArticles} из ${totalArticles}`, 
+        Выполняется: ${article}\n\nВыполнено ${percentComplete}%\nОсталось ${totalArticles - completedArticles} из ${totalArticles}, 
         { chat_id: chatId, message_id: progressMessage.message_id }
       );
     } catch (error) {
-      console.error(`Ошибка обработки артикула ${article}:`, error);
-      await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
+      console.error(Ошибка обработки артикула ${article}:, error);
+      await bot.sendMessage(chatId, Ошибка, данные для артикула ${article} не были получены.);
       // Прерываем обработку текущих артикулов
       break;
     }
@@ -220,21 +215,21 @@ async function processArticle(chatId, article, senderId) {
     dataEmitter.once('dataReady', async (data) => {
       try {
         if (data.error_article) {
-          await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
-          return reject(new Error(`Ошибка данных для артикула ${article}`));
+          await bot.sendMessage(chatId, Ошибка, данные для артикула ${article} не были получены.);
+          return reject(new Error(Ошибка данных для артикула ${article}));
         }
 
         // Получаем информацию о пользователе
-        let userLink = `@id${senderId}`; // Значение по умолчанию
+        let userLink = @id${senderId}; // Значение по умолчанию
         try {
           const userInfo = await bot.getChatMember(chatId, senderId);
           const user = userInfo.user;
           if (user.username) {
-            userLink = `<a href="https://t.me/${user.username}">${user.first_name}</a>`;
+            userLink = <a href="https://t.me/${user.username}">${user.first_name}</a>;
           } else if (user.first_name) {
-            userLink = `<a href="https://t.me/${senderId}">${user.first_name}</a>`;
+            userLink = <a href="https://t.me/${senderId}">${user.first_name}</a>;
           } else {
-            userLink = `<a href="https://t.me/${senderId}">User ${senderId}</a>`;
+            userLink = <a href="https://t.me/${senderId}">User ${senderId}</a>;
           }
         } catch (error) {
           console.error('Ошибка получения информации о пользователе:', error);
@@ -251,12 +246,12 @@ async function processArticle(chatId, article, senderId) {
 
         const pricesText = sortedPrices.join('\n');
 
-        const caption = `<a href="https://www.wildberries.ru/catalog/${article}/detail.aspx?targetUrl=SG">${data.imt_name || 'Без названия'}</a>\n\n` +
-                        `Категория: #${formattedsubjName}\n` +
-                        `Подкатегория: #${formattedSubjName}\n\n` +
-                        `Артикул: <code>${article}</code>\n` +
-                        `Отправитель: ${userLink}\n\n` +
-                        `Предыдущие цены :\n${pricesText}`;
+        const caption = <a href="https://www.wildberries.ru/catalog/${article}/detail.aspx?targetUrl=SG">${data.imt_name || 'Без названия'}</a>\n\n +
+                        Категория: #${formattedsubjName}\n +
+                        Подкатегория: #${formattedSubjName}\n\n +
+                        Артикул: <code>${article}</code>\n +
+                        Отправитель: ${userLink}\n\n +
+                        Предыдущие цены :\n${pricesText};
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
@@ -285,7 +280,7 @@ async function processArticle(chatId, article, senderId) {
                     parse_mode: 'HTML'
                   });
                 } else {
-                  await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
+                  await bot.sendMessage(chatId, Ошибка, данные для артикула ${article} не были получены.);
                 }
               } catch (error) {
                 console.error('Ошибка создания топика:', error);
@@ -294,7 +289,7 @@ async function processArticle(chatId, article, senderId) {
             }
           }
         } else {
-          await bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
+          await bot.sendMessage(chatId, Чат ${chatId} не найден в базе данных.);
         }
 
         resolve();
@@ -305,7 +300,7 @@ async function processArticle(chatId, article, senderId) {
     });
 
     dataEmitter.once('error', async (error) => {
-      await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
+      await bot.sendMessage(chatId, Ошибка при получении данных: ${error.message});
       reject(error);
     });
   });
@@ -313,8 +308,6 @@ async function processArticle(chatId, article, senderId) {
 
 // Функция для проверки и загрузки новой версии
 async function checkForUpdates() {
-  if (!UPDATE) return; // Прекращаем проверку, если UPDATE выключен
-
   https.get(NEW_VERSION_URL, (response) => {
     let data = '';
 
@@ -332,7 +325,7 @@ async function checkForUpdates() {
             // Пишем в чат об обновлении
             for (const chatId in database.chats_id) {
               console.log('Обновление доступно! Новая версия: ' + NEW_VERSION)
-              await bot.sendMessage(chatId, `Обновление доступно! Новая версия: ` + NEW_VERSION);
+              await bot.sendMessage(chatId, Обновление доступно! Новая версия:  + NEW_VERSION);
             }
             
             // Прекращаем принимать заказы в очередь
@@ -372,10 +365,8 @@ async function getUpdateProcessId() {
   });
 }
 
-// Запускаем проверку обновлений каждую минуту, если флаг UPDATE включен
-if (UPDATE) {
-  setInterval(checkForUpdates, 30 * 1000);
-}
+// Запускаем проверку обновлений каждую минуту
+setInterval(checkForUpdates, 30 * 1000);
 
 // Инициализация базы данных
 loadDatabase();
