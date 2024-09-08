@@ -365,8 +365,9 @@ async function getUpdateProcessId() {
   });
 }
 
-// Запускаем проверку обновлений каждую минуту
-setInterval(checkForUpdates, 30 * 1000);
 
 // Инициализация базы данных
 loadDatabase();
+
+// Запускаем проверку обновлений каждую минуту
+setInterval(checkForUpdates, 30 * 1000);
