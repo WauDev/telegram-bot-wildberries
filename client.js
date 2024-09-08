@@ -1,4 +1,4 @@
-const VERSION = "1.2.6";
+const VERSION = "1.2.7";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -112,8 +112,8 @@ bot.onText(/\/delchat/, async (msg) => {
 });
 
 //
-// Команда для удаления чата из базы данных
-bot.onText(/\/delchat/, async (msg) => {
+// Команда для получения текущей версии 
+bot.onText(/\/version/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   
