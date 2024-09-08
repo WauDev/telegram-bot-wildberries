@@ -111,16 +111,9 @@ bot.onText(/\/delchat/, async (msg) => {
   }
 });
 
-// Проба
-// Команда для получения текущей версии 
-bot.onText(/\/version/, async (msg) => {
-  const chatId = msg.chat.id;
-bot.sendMessage(chatId, `Теущуая версия: ` + VERSION);
-}
 
 
 
-// Проба
 
 // Основная логика для артикулов
 bot.on('message', (msg) => {
