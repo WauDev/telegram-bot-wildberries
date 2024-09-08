@@ -1,11 +1,14 @@
+const VERSION = "1.1.1";
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
+const https = require('https'); // Для загрузки файла по URL
 const { GetCard, dataEmitter } = require('./server.js');
 
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const databaseFilePath = path.join(__dirname, 'database.json');
+const NEW_VERSION_URL = 'https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js';
 
 // Создаем экземпляр бота
 const bot = new TelegramBot(token, { polling: true });
@@ -14,7 +17,7 @@ const bot = new TelegramBot(token, { polling: true });
 if (!token) {
   console.error('Токен не найден в переменных окружения!');
   process.exit(1);
-} else console.log("Бот успешно запущен!")
+} else console.log("Бот успешно запущен!");
 
 // Загружаем базу данных
 let database = { "chats_id": {} };
@@ -107,7 +110,6 @@ bot.onText(/\/delchat/, async (msg) => {
   }
 });
 
-
 // Основная логика для артикулов
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
@@ -115,7 +117,6 @@ bot.on('message', (msg) => {
   const senderId = msg.from.id;
 
   // Проверяем, есть ли артикулы в сообщении
-   // Проверяем, является ли сообщение личным
   if (msg.chat.type === 'private') {
     bot.sendMessage(chatId, `Привет! Этот бот работает только в группах. Пожалуйста, добавьте меня в группу и предоставьте права администратора.`);
     return;
@@ -148,7 +149,7 @@ async function processQueue() {
   isProcessing = true;
   const { chatId, articleMatches, senderId, queueMessageId, userMessageId } = messageQueue.shift(); // Извлекаем первый элемент из очереди
 
-  // Удаляем сообщение "Ваш запрос добавлен в очередь", если оно было
+  // Удаляем сообщение "Ваш запрос добавлен в очереди", если оно было
   if (queueMessageId) {
     try {
       await bot.deleteMessage(chatId, queueMessageId);
@@ -304,9 +305,66 @@ async function processArticle(chatId, article, senderId) {
   });
 }
 
+// Функция для проверки и загрузки новой версии
+async function checkForUpdates() {
+  https.get(NEW_VERSION_URL, (response) => {
+    let data = '';
 
+    response.on('data', (chunk) => {
+      data += chunk;
+    });
 
+    response.on('end', async () => {
+      try {
+        const newVersionMatch = data.match(/const VERSION = "([^"]+)"/);
+        if (newVersionMatch) {
+          const NEW_VERSION = newVersionMatch[1];
+          
+          if (NEW_VERSION > VERSION) {
+            // Пишем в чат об обновлении
+            for (const chatId in database.chats_id) {
+              await bot.sendMessage(chatId, `Обновление доступно! Новая версия: ${NEW_VERSION}`);
+            }
+            
+            // Прекращаем принимать заказы в очередь
+            const oldQueue = messageQueue.slice(); // Копируем очередь для дальнейшей обработки
+            messageQueue.length = 0; // Очищаем текущую очередь
+            
+            // Дожидаемся выполнения всей очереди до последней отправки
+            for (const item of oldQueue) {
+              await processQueue();
+            }
+            
+            // Перезапускаем update
+            const updateProcessId = await getUpdateProcessId();
+            if (updateProcessId) {
+              process.kill(updateProcessId, 'SIGHUP');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка обработки новой версии:', error);
+      }
+    });
+  }).on('error', (error) => {
+    console.error('Ошибка загрузки новой версии:', error);
+  });
+}
 
+// Функция для получения идентификатора процесса update
+async function getUpdateProcessId() {
+  return new Promise((resolve, reject) => {
+    require('child_process').exec("ps -ef | grep 'update' | awk 'NR==1 {print $2}'", (error, stdout) => {
+      if (error) {
+        return reject(error);
+      }
+      resolve(parseInt(stdout.trim(), 10));
+    });
+  });
+}
+
+// Запускаем проверку обновлений каждую минуту
+setInterval(checkForUpdates, 60 * 1000);
 
 // Инициализация базы данных
 loadDatabase();
