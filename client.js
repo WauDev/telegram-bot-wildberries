@@ -216,23 +216,54 @@ async function processArticle(chatId, article, senderId) {
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
-        if (chatData) { const threadId = chatData.threads_id[data.subj_name]; 
-                       if (threadId) { await bot.sendPhoto(chatId, data.Image_Link, { caption: caption, message_thread_id: threadId, parse_mode: 'HTML' }); } 
-                       else { if (!chatData.threads_id.hasOwnProperty(data.subj_name)) { try { if (data.subj_name && data.subj_name.trim() !== '') { const forumTopic = await bot.createForumTopic(chatId, data.subj_name); const newThreadId = forumTopic.message_thread_id; chatData.threads_id[data.subj_name] = newThreadId; saveDatabase(); await bot.sendPhoto(chatId, data.Image_Link, { caption: caption, message_thread_id: newThreadId, parse_mode: 'HTML' }); } 
-                       else { await bot.sendMessage(chatId, Ошибка, данные для артикула ${article} не были получены.); } } catch (error) { console.error('Ошибка создания топика:', error); await bot.sendMessage(chatId, 'Не удалось создать новый топик для категории.'); } } } } 
-        else { await bot.sendMessage(chatId, Чат ${chatId} не найден в базе данных.); }
-            resolve();
-  } catch (error) {
-    console.error('Ошибка обработки данных:', error);
-    reject(error);
-  }
-});
+        if (chatData) {
+          const threadId = chatData.threads_id[data.subj_name];
+          if (threadId) {
+            await bot.sendPhoto(chatId, data.Image_Link, {
+              caption: caption,
+              message_thread_id: threadId,
+              parse_mode: 'HTML'
+            });
+          } else {
+            if (!chatData.threads_id.hasOwnProperty(data.subj_name)) {
+              try {
+                if (data.subj_name && data.subj_name.trim() !== '') {
+                  const forumTopic = await bot.createForumTopic(chatId, data.subj_name);
+                  const newThreadId = forumTopic.message_thread_id;
+                  chatData.threads_id[data.subj_name] = newThreadId;
+                  saveDatabase();
+                  await bot.sendPhoto(chatId, data.Image_Link, {
+                    caption: caption,
+                    message_thread_id: newThreadId,
+                    parse_mode: 'HTML'
+                  });
+                } else {
+                  await bot.sendMessage(chatId, `Ошибка, данные для артикула ${article} не были получены.`);
+                }
+              } catch (error) {
+                console.error('Ошибка создания топика:', error);
+                await bot.sendMessage(chatId, 'Не удалось создать новый топик для категории.');
+              }
+            }
+          }
+        } else {
+          await bot.sendMessage(chatId, `Чат ${chatId} не найден в базе данных.`);
+        }
 
-dataEmitter.once('error', async (error) => {
-  await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
-  reject(error);
-});
-    }); }
+        resolve();
+      } catch (error) {
+        console.error('Ошибка обработки данных:', error);
+        reject(error);
+      }
+    });
+
+    dataEmitter.once('error', async (error) => {
+      await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
+      reject(error);
+    });
+  });
+}
+
 
 // Инициализация базы данных 
 loadDatabase();
