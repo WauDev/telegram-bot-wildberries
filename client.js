@@ -364,7 +364,7 @@ async function getUpdateProcessId() {
 }
 
 // Запускаем проверку обновлений каждую минуту
-setInterval(checkForUpdates, 60 * 1000);
+setInterval(checkForUpdates, 30 * 1000);
 
 // Инициализация базы данных
 loadDatabase();
