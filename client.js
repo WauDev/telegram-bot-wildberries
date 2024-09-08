@@ -1,5 +1,5 @@
 const VERSION = "1.2.3";
-convole.log(VERSION)
+console.log(VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
