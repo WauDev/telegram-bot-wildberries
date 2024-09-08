@@ -1,4 +1,5 @@
 const VERSION = "1.4.1"; // Старая версия
+console.log(VERSION)
 const NEW_VERSION_URL = "https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js.temp"; // URL для проверки обновлений
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
