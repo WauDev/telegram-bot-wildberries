@@ -1,10 +1,10 @@
-const VERSION = "1.3.1";
-console.log(VERSION)
-const NEW_VERSION_URL = "https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js"; // URL для проверки обновлений
+const VERSION = "1.1.1"; // Старая версия
+const NEW_VERSION_URL = "https://raw.githubusercontent.com/WauDev/telegram-bot-wildberries/main/client.js.temp"; // URL для проверки обновлений
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { exec } = require('child_process');
 const { GetCard, dataEmitter } = require('./server.js');
 
 // Получаем токен из переменной окружения
@@ -81,17 +81,22 @@ function notifyUpdate(newVersion) {
   // Дожидаемся завершения всех задач в очереди
   processQueue(() => {
     console.log('Очередь завершена, бот завершает работу для обновления.');
-    killOldProcess();
-  });
-}
+    exec("kill -s SIGHUP $(pgrep -f update)", (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Ошибка завершения процесса: ${error.message}`);
+      } else {
+        console.log('Процесс обновления завершён.');
+      }
 
-// Функция для завершения работы старого процесса
-function killOldProcess() {
-  const exec = require('child_process').exec;
-  exec("kill -s SIGHUP $(ps -ef | grep update | awk 'NR==1 {print $2}')", (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Ошибка завершения процесса: ${error.message}`);
-    }
+      // Запускаем update.js
+      exec('node update.js', (err, stdout, stderr) => {
+        if (err) {
+          console.error(`Ошибка запуска update.js: ${err.message}`);
+        } else {
+          console.log('update.js успешно запущен.');
+        }
+      });
+    });
   });
 }
 
@@ -210,43 +215,27 @@ async function processArticle(chatId, article, senderId) {
 
         // Ищем данные по категории в базе данных
         const chatData = database.chats_id[chatId];
-        if (chatData) {
-          const threadId = chatData.threads_id[data.subj_name];
-          if (threadId) {
-            await bot.sendPhoto(chatId, data.Image_Link, {
-              caption: caption,
-              message_thread_id: threadId,
-              parse_mode: 'HTML'
-            });
-          } else {
-            if (!chatData.threads_id.hasOwnProperty(data.subj_name)) {
-              try {
-                if (data.subj_name && data.subj_name.trim() !== '') {
-                  const createdThread = await bot.createForumTopic(chatId, data.subj_name);
-                  chatData.threads_id[data.subj_name] = createdThread.message_thread_id;
-                  saveDatabase();
-                  await bot.sendPhoto(chatId, data.Image_Link, {
-                    caption: caption,
-                    message_thread_id: createdThread.message_thread_id,
-                    parse_mode: 'HTML'
-                  });
-                }
-              } catch (error) {
-                console.error('Ошибка при создании новой темы форума:', error);
-              }
-            }
-          }
-        }
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
+        if (chatData) { const threadId = chatData.threads_id[data.subj_name]; 
+                       if (threadId) { await bot.sendPhoto(chatId, data.Image_Link, { caption: caption, message_thread_id: threadId, parse_mode: 'HTML' }); } 
+                       else { if (!chatData.threads_id.hasOwnProperty(data.subj_name)) { try { if (data.subj_name && data.subj_name.trim() !== '') { const forumTopic = await bot.createForumTopic(chatId, data.subj_name); const newThreadId = forumTopic.message_thread_id; chatData.threads_id[data.subj_name] = newThreadId; saveDatabase(); await bot.sendPhoto(chatId, data.Image_Link, { caption: caption, message_thread_id: newThreadId, parse_mode: 'HTML' }); } 
+                       else { await bot.sendMessage(chatId, Ошибка, данные для артикула ${article} не были получены.); } } catch (error) { console.error('Ошибка создания топика:', error); await bot.sendMessage(chatId, 'Не удалось создать новый топик для категории.'); } } } } 
+        else { await bot.sendMessage(chatId, Чат ${chatId} не найден в базе данных.); }
+            resolve();
+  } catch (error) {
+    console.error('Ошибка обработки данных:', error);
+    reject(error);
+  }
+});
 
-// Инициализация базы данных
+dataEmitter.once('error', async (error) => {
+  await bot.sendMessage(chatId, `Ошибка при получении данных: ${error.message}`);
+  reject(error);
+});
+    }); }
+
+// Инициализация базы данных 
 loadDatabase();
 
-// Запускаем проверку на обновления каждую минуту
+// Запускаем проверку на обновления каждую минуту 
 setInterval(checkForUpdates, 60 * 1000);
+
