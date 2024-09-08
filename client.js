@@ -1,5 +1,5 @@
 const VERSION = "1.1.1";
-console.log(VERSION)
+console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
@@ -324,6 +324,7 @@ async function checkForUpdates() {
           if (NEW_VERSION > VERSION) {
             // Пишем в чат об обновлении
             for (const chatId in database.chats_id) {
+              console.log('Обновление доступно! Новая версия: ' + NEW_VERSION)
               await bot.sendMessage(chatId, `Обновление доступно! Новая версия: ${NEW_VERSION}`);
             }
             
