@@ -239,25 +239,22 @@ function stopProcessingNewTasks() {
 }
 
 // Функция ожидания завершения очереди или немедленного завершения, если задач нет
-function waitForQueueToFinish() {
+async function waitForQueueToFinish() {
   return new Promise(resolve => {
-    if (messageQueue.length === 0 && !isProcessing) {
-      // Если нет задач в очереди и ничего не обрабатывается, завершаем сразу
-      console.log('Очередь пуста, переходим к завершению процесса.');
-      resolve();
-    } else {
-      const checkQueue = () => {
-        if (!isProcessing && messageQueue.length === 0) {
-          console.log('Очередь завершена, переходим к завершению процесса.');
-          resolve();
-        } else {
-          setTimeout(checkQueue, 1000); // Проверяем каждые 1 секунду
-        }
-      };
-      checkQueue();
-    }
+    console.log('Проверяем состояние очереди...');
+    const checkQueue = () => {
+      if (!isProcessing && messageQueue.length === 0) {
+        console.log('Очередь завершена, переходим к завершению процесса.');
+        resolve();
+      } else {
+        console.log(`Очередь не пуста. Очередь: ${messageQueue.length}, Обработка: ${isProcessing}`);
+        setTimeout(checkQueue, 1000); // Проверяем каждые 1 секунду
+      }
+    };
+    checkQueue();
   });
 }
+
 
 // Отправка уведомления об обновлении во все чаты
 function sendUpdateNotification(message) {
