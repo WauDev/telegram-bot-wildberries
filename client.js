@@ -1,4 +1,4 @@
-const VERSION = "1.2.3";
+const VERSION = "1.2.4";
 console.log(VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
