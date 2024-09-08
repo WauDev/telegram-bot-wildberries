@@ -1,4 +1,5 @@
-const VERSION = '1.3.1 07.09.2024';
+const VERSION = '1.4.1 07.09.2024';
+condole.log(VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const path = require('path');
