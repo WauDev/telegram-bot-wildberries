@@ -1,8 +1,9 @@
 const UPDATE = true; // Установите значение в false, чтобы отключить проверку обновлений
 
-  const VERSION = "1.2.9";
+if (UPDATE) {
+  const VERSION = "1.2.8";
   console.log("Текущая версия: " + VERSION);
-
+}
 
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
