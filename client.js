@@ -80,18 +80,10 @@ bot.onText(/\/setdisk (.+)/, (msg, match) => {
     need_disk = '';
     bot.sendMessage(chatId, 'Значение для диска сброшено. Найдите свой диск.');
   } else {
-    need_disk = diskPath;
+    const need_disk = diskPath;
     bot.sendMessage(chatId, `Диск установлен: ${need_disk}`);
   }
 });
-
-// Пример проверки на наличие диска в других частях кода
-if (need_disk === '') {
-  console.log("Найдите свой диск");
-} else {
-  console.log(`Диск установлен: ${need_disk}`);
-  // Логика для работы с диском
-}
 
 // Получение информации о дисковом пространстве
 const getDiskSpace = (need_disk = '') =>
