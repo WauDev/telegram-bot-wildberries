@@ -1,4 +1,4 @@
-const VERSION = "1.2.3";
+const VERSION = "1.2.4";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -69,8 +69,6 @@ async function isAdmin(chatId, userId) {
     return false;
   }
 }
-
-let need_disk = ''; // Изначальное значение
 
 // Команда для установки значения диска
 bot.onText(/\/setdisk (.+)/, (msg, match) => {
