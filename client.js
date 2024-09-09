@@ -1,4 +1,4 @@
-const VERSION = "1.2.5";
+const VERSION = "1.2.8";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -70,87 +70,73 @@ async function isAdmin(chatId, userId) {
   }
 }
 
-// Команда для установки значения диска
-bot.onText(/\/setdisk (.+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const diskPath = match[1]; // Извлечение аргумента после команды /setdisk
-
-  // Если передана пустая строка, присваиваем пустое значение
-  if (diskPath === '') {
-    need_disk = '';
-    bot.sendMessage(chatId, 'Значение для диска сброшено. Найдите свой диск.');
-  } else {
-    const need_disk = diskPath;
-    bot.sendMessage(chatId, `Диск установлен: ${need_disk}`);
-  }
-});
-
-// Команда /getinfo для вывода информации о системе
-bot.onText(/\/getinfo/, async (msg) => {
-  const chatId = msg.chat.id;
-  const need_disk = '/dev/loop50'; // Указываем диск, который хотим отслеживать
-
-  try {
-    // Получаем информацию о дисковом пространстве
-    const { result, diskInfo } = await getDiskSpace(need_disk);
-
-    if (diskInfo) {
-      // Получаем информацию о памяти и процессоре
-      const systemInfo = await getSystemInfo();
-
-      // Форматируем ответ
-      const response = `Информация о системе:\n\n` +
-        `Диск (${need_disk}):\n` +
-        `- Процент использования: ${diskInfo.UsageDiskPercentage}\n` +
-        `- Общий размер: ${diskInfo.Disk}\n` +
-        `- Используется: ${diskInfo.UsageDiskMB}\n\n` +
-        `RAM:\n` +
-        `- Использование памяти: ${systemInfo.memoryUsage.toFixed(2)} MB\n` +
-        `CPU:\n` +
-        `- ${systemInfo.cpuInfo}`;
-
-      // Отправляем сообщение в чат
-      await bot.sendMessage(chatId, response);
-    } else {
-      await bot.sendMessage(chatId, `Найдите свой диск. Информация о RAM и CPU:\n${result}`);
-    }
-  } catch (error) {
-    console.error('Ошибка при получении информации о системе:', error);
-    bot.sendMessage(chatId, 'Ошибка при получении информации о системе.');
-  }
-});
-
 // Получение информации о дисковом пространстве
-const getDiskSpace = (need_disk = '') =>
+const getDiskSpace = () =>
   new Promise((resolve, reject) => {
     exec('df -h', (err, stdout, stderr) => {
       if (err || stderr) return reject(`Ошибка: ${err || stderr}`);
-      
+
       const lines = stdout.trim().split('\n');
       const headers = lines[0].split(/\s+/);
-      const result = need_disk ? '' : `${headers.join(' ')}\n${lines.slice(1).join('\n')}`;
-      const diskInfo = lines.slice(1).reduce((info, line) => {
+      const loopDisks = lines.slice(1).filter(line => line.startsWith('/dev/loop'));
+
+      if (loopDisks.length === 0) {
+        return resolve({ result: 'Диски /dev/loop не найдены.', diskInfo: null });
+      }
+
+      const diskInfo = loopDisks.map(line => {
         const [filesystem, size, used, , usePercent, ] = line.split(/\s+/);
-        if (filesystem === need_disk) {
-          return { UsageDiskPercentage: usePercent, Disk: size, UsageDiskMB: used };
-        }
-        return info;
-      }, null);
-      
-      resolve({ result, diskInfo });
+        return { Filesystem: filesystem, UsageDiskPercentage: usePercent, Disk: size, UsageDiskMB: used };
+      });
+
+      resolve({ diskInfo });
     });
   });
 
 // Получение информации о памяти и процессоре
-const getSystemInfo = () =>
-  new Promise((resolve, reject) => {
-    const memoryUsage = parseInt(fs.readFileSync("/sys/fs/cgroup/memory/memory.usage_in_bytes", 'utf8').trim(), 10) / 1024 / 1024;
-    exec('top -b -n1 | grep "Cpu(s)"', (err, stdout, stderr) => {
-      if (err || stderr) return reject(`Ошибка: ${err || stderr}`);
-      const cpuInfo = stdout.trim();
-      resolve({ memoryUsage, cpuInfo });
-    });
-  });
+const getSystemInfo = () => {
+  const memoryUsage = parseInt(fs.readFileSync("/sys/fs/cgroup/memory/memory.soft_limit_in_bytes", 'utf8').trim(), 10) / 1024 / 1024;
+  const totalRss = fs.readFileSync("/sys/fs/cgroup/memory/memory.stat", "utf8")
+    .split("\n")
+    .filter(line => line.startsWith("total_rss"))[0]
+    .split(" ")[1];
+  const ramPercent = Math.round((totalRss / 536870912) * 1000) / 30;
+
+  return {
+    MemoryUsagePercentage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    RAMUsageMB: Math.round(ramPercent),
+    MemoryUsage: memoryUsage,
+    CPUUsagePercentage: Math.round(process.cpuUsage().system) / 1000
+  };
+}
+
+// Команда для получения информации о системе
+bot.onText(/\/getinfo/, async (msg) => {
+  const chatId = msg.chat.id;
+  
+  try {
+    const { diskInfo } = await getDiskSpace();
+
+    if (!diskInfo) {
+      await bot.sendMessage(chatId, 'Диски /dev/loop не найдены.');
+    } else {
+      const systemInfo = getSystemInfo();
+      let infoMessage = `RAM: ${systemInfo.MemoryUsagePercentage}%    ${systemInfo.RAMUsageMB}MB / ${systemInfo.MemoryUsage}MB\n`;
+
+      diskInfo.forEach(disk => {
+        infoMessage += `ROM: ${disk.UsageDiskPercentage}  ${disk.UsageDiskMB}B / ${disk.Disk}B (${disk.Filesystem})\n`;
+      });
+
+      infoMessage += `CPU: ${systemInfo.CPUUsagePercentage}%`;
+
+      await bot.sendMessage(chatId, infoMessage);
+    }
+  } catch (error) {
+    console.error('Ошибка получения информации о системе:', error);
+    await bot.sendMessage(chatId, `Ошибка получения информации о системе: ${error.message}`);
+  }
+});
+
 
 // Команда для удаления чата из базы данных
 bot.onText(/\/delchat/, async (msg) => {
@@ -175,10 +161,7 @@ bot.onText(/\/delchat/, async (msg) => {
 bot.onText(/\/version/, async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  
-  
-      bot.sendMessage(chatId, `Текущая версия: ` + VERSION);
-    
+  bot.sendMessage(chatId, `Текущая версия: ` + VERSION);
 });
 //
 
