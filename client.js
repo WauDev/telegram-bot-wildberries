@@ -70,6 +70,31 @@ async function isAdmin(chatId, userId) {
   }
 }
 
+let need_disk = ''; // Изначальное значение
+
+// Команда для установки значения диска
+bot.onText(/\/setdisk (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const diskPath = match[1]; // Извлечение аргумента после команды /setdisk
+
+  // Если передана пустая строка, присваиваем пустое значение
+  if (diskPath === '') {
+    need_disk = '';
+    bot.sendMessage(chatId, 'Значение для диска сброшено. Найдите свой диск.');
+  } else {
+    need_disk = diskPath;
+    bot.sendMessage(chatId, `Диск установлен: ${need_disk}`);
+  }
+});
+
+// Пример проверки на наличие диска в других частях кода
+if (need_disk === '') {
+  console.log("Найдите свой диск");
+} else {
+  console.log(`Диск установлен: ${need_disk}`);
+  // Логика для работы с диском
+}
+
 // Получение информации о дисковом пространстве
 const getDiskSpace = (need_disk = '') =>
   new Promise((resolve, reject) => {
@@ -114,7 +139,7 @@ const GetInfo = async (chatId, need_disk) => {
     const { result, diskInfo } = await getDiskSpace(need_disk);
 
     let message = '';
-    if (need_disk === '/dev/loop32') {
+    if (need_disk === '') {
       message = 'Найдите свой диск:\n' + result.trim();
     } else if (diskInfo) {
       const systemInfo = getSystemInfo();
