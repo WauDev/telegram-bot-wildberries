@@ -1,4 +1,4 @@
-const VERSION = "1.2.8";
+const VERSION = "1.2.3";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -114,7 +114,7 @@ const GetInfo = async (chatId, need_disk) => {
     const { result, diskInfo } = await getDiskSpace(need_disk);
 
     let message = '';
-    if (need_disk === '') {
+    if (need_disk === '/dev/loop32') {
       message = 'Найдите свой диск:\n' + result.trim();
     } else if (diskInfo) {
       const systemInfo = getSystemInfo();
