@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https'); // Для загрузки файла по URL
 const { GetCard, dataEmitter } = require('./server.js');
+const { exec } = require('child_process');
 
 // Получаем токен из переменной окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -68,6 +69,75 @@ async function isAdmin(chatId, userId) {
     return false;
   }
 }
+
+// Получение информации о дисковом пространстве
+const getDiskSpace = (need_disk = '') =>
+  new Promise((resolve, reject) => {
+    exec('df -h', (err, stdout, stderr) => {
+      if (err || stderr) return reject(`Ошибка: ${err || stderr}`);
+      
+      const lines = stdout.trim().split('\n');
+      const headers = lines[0].split(/\s+/);
+      const result = need_disk ? '' : `${headers.join(' ')}\n${lines.slice(1).join('\n')}`;
+      const diskInfo = lines.slice(1).reduce((info, line) => {
+        const [filesystem, size, used, , usePercent, ] = line.split(/\s+/);
+        if (filesystem === need_disk) {
+          return { UsageDiskPercentage: usePercent, Disk: size, UsageDiskMB: used };
+        }
+        return info;
+      }, null);
+      
+      resolve({ result, diskInfo });
+    });
+  });
+
+// Получение информации о памяти и процессоре
+const getSystemInfo = () => {
+  const memoryUsage = parseInt(fs.readFileSync("/sys/fs/cgroup/memory/memory.soft_limit_in_bytes", 'utf8').trim(), 10) / 1024 / 1024;
+  const totalRss = fs.readFileSync("/sys/fs/cgroup/memory/memory.stat", "utf8")
+    .split("\n")
+    .filter(line => line.startsWith("total_rss"))[0]
+    .split(" ")[1];
+  const ramPercent = Math.round((totalRss / 536870912) * 1000) / 30;
+  
+  return {
+    MemoryUsagePercentage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    RAMUsageMB: Math.round(ramPercent),
+    MemoryUsage: memoryUsage,
+    CPUUsagePercentage: Math.round(process.cpuUsage().system) / 1000
+  };
+}
+
+// Основная функция
+const GetInfo = async (chatId, need_disk) => {
+  try {
+    const { result, diskInfo } = await getDiskSpace(need_disk);
+
+    let message = '';
+    if (need_disk === '') {
+      message = 'Найдите свой диск:\n' + result.trim();
+    } else if (diskInfo) {
+      const systemInfo = getSystemInfo();
+      message = `RAM: ${systemInfo.MemoryUsagePercentage}%    ${systemInfo.RAMUsageMB}MB / ${systemInfo.MemoryUsage}MB\n` +
+                `ROM: ${diskInfo.UsageDiskPercentage}  ${diskInfo.UsageDiskMB}B / ${diskInfo.Disk}B\n` +
+                `CPU: ${systemInfo.CPUUsagePercentage}%`;
+    } else {
+      message = 'Диск не найден.';
+    }
+    await bot.sendMessage(chatId, message);
+  } catch (error) {
+    console.error(error);
+    await bot.sendMessage(chatId, `Ошибка получения информации: ${error}`);
+  }
+};
+
+// Команда для получения информации о системе
+bot.onText(/\/getinfo(?:\s+(\/dev\/\S+))?/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const need_disk = match[1] || ''; // Получаем путь к диску из команды, если он указан
+
+  await GetInfo(chatId, need_disk);
+});
 
 // Команда для добавления чата в базу данных
 bot.onText(/\/addchat/, async (msg) => {
