@@ -1,4 +1,4 @@
-const VERSION = "1.2.4";
+const VERSION = "1.2.5";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -85,6 +85,41 @@ bot.onText(/\/setdisk (.+)/, (msg, match) => {
   }
 });
 
+// Команда /getinfo для вывода информации о системе
+bot.onText(/\/getinfo/, async (msg) => {
+  const chatId = msg.chat.id;
+  const need_disk = '/dev/loop50'; // Указываем диск, который хотим отслеживать
+
+  try {
+    // Получаем информацию о дисковом пространстве
+    const { result, diskInfo } = await getDiskSpace(need_disk);
+
+    if (diskInfo) {
+      // Получаем информацию о памяти и процессоре
+      const systemInfo = await getSystemInfo();
+
+      // Форматируем ответ
+      const response = `Информация о системе:\n\n` +
+        `Диск (${need_disk}):\n` +
+        `- Процент использования: ${diskInfo.UsageDiskPercentage}\n` +
+        `- Общий размер: ${diskInfo.Disk}\n` +
+        `- Используется: ${diskInfo.UsageDiskMB}\n\n` +
+        `RAM:\n` +
+        `- Использование памяти: ${systemInfo.memoryUsage.toFixed(2)} MB\n` +
+        `CPU:\n` +
+        `- ${systemInfo.cpuInfo}`;
+
+      // Отправляем сообщение в чат
+      await bot.sendMessage(chatId, response);
+    } else {
+      await bot.sendMessage(chatId, `Найдите свой диск. Информация о RAM и CPU:\n${result}`);
+    }
+  } catch (error) {
+    console.error('Ошибка при получении информации о системе:', error);
+    bot.sendMessage(chatId, 'Ошибка при получении информации о системе.');
+  }
+});
+
 // Получение информации о дисковом пространстве
 const getDiskSpace = (need_disk = '') =>
   new Promise((resolve, reject) => {
@@ -107,76 +142,15 @@ const getDiskSpace = (need_disk = '') =>
   });
 
 // Получение информации о памяти и процессоре
-const getSystemInfo = () => {
-  const memoryUsage = parseInt(fs.readFileSync("/sys/fs/cgroup/memory/memory.soft_limit_in_bytes", 'utf8').trim(), 10) / 1024 / 1024;
-  const totalRss = fs.readFileSync("/sys/fs/cgroup/memory/memory.stat", "utf8")
-    .split("\n")
-    .filter(line => line.startsWith("total_rss"))[0]
-    .split(" ")[1];
-  const ramPercent = Math.round((totalRss / 536870912) * 1000) / 30;
-  
-  return {
-    MemoryUsagePercentage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-    RAMUsageMB: Math.round(ramPercent),
-    MemoryUsage: memoryUsage,
-    CPUUsagePercentage: Math.round(process.cpuUsage().system) / 1000
-  };
-}
-
-// Основная функция
-const GetInfo = async (chatId, need_disk) => {
-  try {
-    const { result, diskInfo } = await getDiskSpace(need_disk);
-
-    let message = '';
-    if (need_disk === '') {
-      message = 'Найдите свой диск:\n' + result.trim();
-    } else if (diskInfo) {
-      const systemInfo = getSystemInfo();
-      message = `RAM: ${systemInfo.MemoryUsagePercentage}%    ${systemInfo.RAMUsageMB}MB / ${systemInfo.MemoryUsage}MB\n` +
-                `ROM: ${diskInfo.UsageDiskPercentage}  ${diskInfo.UsageDiskMB}B / ${diskInfo.Disk}B\n` +
-                `CPU: ${systemInfo.CPUUsagePercentage}%`;
-    } else {
-      message = 'Диск не найден.';
-    }
-    await bot.sendMessage(chatId, message);
-  } catch (error) {
-    console.error(error);
-    await bot.sendMessage(chatId, `Ошибка получения информации: ${error}`);
-  }
-};
-
-// Команда для получения информации о системе
-bot.onText(/\/getinfo(?:\s+(\/dev\/\S+))?/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  const need_disk = match[1] || ''; // Получаем путь к диску из команды, если он указан
-
-  await GetInfo(chatId, need_disk);
-});
-
-// Команда для добавления чата в базу данных
-bot.onText(/\/addchat/, async (msg) => {
-  const chatId = msg.chat.id;
-  const userId = msg.from.id;
-  
-  if (await isAdmin(chatId, userId)) {
-    const chatData = database.chats_id[chatId];
-    
-    if (chatData) {
-      bot.sendMessage(chatId, `Чат ${chatId} уже существует в базе данных.`);
-    } else {
-      const chatName = msg.chat.title || 'Неизвестная группа';
-      database.chats_id[chatId] = {
-        name: chatName,
-        threads_id: {}
-      };
-      saveDatabase();
-      bot.sendMessage(chatId, `Чат ${chatId} добавлен в базу данных.`);
-    }
-  } else {
-    bot.sendMessage(chatId, `У вас нет прав для выполнения этой команды.`);
-  }
-});
+const getSystemInfo = () =>
+  new Promise((resolve, reject) => {
+    const memoryUsage = parseInt(fs.readFileSync("/sys/fs/cgroup/memory/memory.usage_in_bytes", 'utf8').trim(), 10) / 1024 / 1024;
+    exec('top -b -n1 | grep "Cpu(s)"', (err, stdout, stderr) => {
+      if (err || stderr) return reject(`Ошибка: ${err || stderr}`);
+      const cpuInfo = stdout.trim();
+      resolve({ memoryUsage, cpuInfo });
+    });
+  });
 
 // Команда для удаления чата из базы данных
 bot.onText(/\/delchat/, async (msg) => {
