@@ -1,8 +1,7 @@
-const VERSION = "1.2.8";
+const VERSION = "1.2.7";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
-t os = require('os');
 const path = require('path');
 const https = require('https'); // Для загрузки файла по URL
 const { GetCard, dataEmitter } = require('./server.js');
@@ -56,73 +55,6 @@ bot.onText(/\/database/, (msg) => {
     bot.sendMessage(chatId, response);
   } else {
     bot.sendMessage(chatId, `Данные для чата ${chatId} не найдены.`);
-  }
-});
-
-// Функция для получения информации о системе
-async function getSystemInfo() {
-  // Получаем информацию о RAM
-  const totalRAM = os.totalmem() / (1024 * 1024); // в МБ
-  const freeRAM = os.freemem() / (1024 * 1024); // в МБ
-  const usedRAM = totalRAM - freeRAM;
-  const ramUsagePercentage = Math.round((usedRAM / totalRAM) * 100);
-
-  // Получаем информацию о CPU
-  const cpuUsage = await new Promise((resolve, reject) => {
-    exec('top -bn1 | grep "Cpu(s)" | sed "s/.*, *\\([0-9.]*\\)%* id.*/\\1/" | awk \'{print 100 - $1}\'', (error, stdout) => {
-      if (error) {
-        return reject(error);
-      }
-      resolve(parseFloat(stdout.trim()));
-    });
-  });
-
-  return {
-    RAMUsagePercentage: ramUsagePercentage,
-    RAMUsageMB: Math.round(usedRAM),
-    CPUUsagePercentage: cpuUsage
-  };
-}
-
-// Функция для получения информации о диске
-async function getDiskInfo(diskPath) {
-  return new Promise((resolve, reject) => {
-    exec(`df -h ${diskPath} | tail -1 | awk '{print $5, $3, $2}'`, (error, stdout) => {
-      if (error) {
-        return reject(error);
-      }
-      const [usagePercentage, usedSpace, totalSpace] = stdout.trim().split(' ');
-      resolve({
-        UsageDiskPercentage: usagePercentage,
-        UsageDiskMB: usedSpace,
-        Disk: totalSpace
-      });
-    });
-  });
-}
-
-// Команда для получения информации о системе
-bot.onText(/\/getinfo/, async (msg) => {
-  const chatId = msg.chat.id;
-  const needDiskPath = '/dev/loop50'; // Укажите путь к диску
-
-  try {
-    const systemInfo = await getSystemInfo();
-    let diskInfo = {};
-
-    if (needDiskPath) {
-      diskInfo = await getDiskInfo(needDiskPath);
-      bot.sendMessage(chatId, `RAM: ${systemInfo.RAMUsagePercentage}% ${systemInfo.RAMUsageMB}MB / ${os.totalmem() / (1024 * 1024)}MB\n` +
-                             `ROM: ${diskInfo.UsageDiskPercentage} ${diskInfo.UsageDiskMB}B / ${diskInfo.Disk}B\n` +
-                             `CPU: ${systemInfo.CPUUsagePercentage}%`);
-    } else {
-      bot.sendMessage(chatId, "Найдите свой диск.\n" +
-                             `RAM: ${systemInfo.RAMUsagePercentage}% ${systemInfo.RAMUsageMB}MB / ${os.totalmem() / (1024 * 1024)}MB\n` +
-                             `CPU: ${systemInfo.CPUUsagePercentage}%`);
-    }
-  } catch (error) {
-    console.error('Ошибка получения информации о системе:', error);
-    bot.sendMessage(chatId, `Ошибка получения информации о системе: ${error.message}`);
   }
 });
 
