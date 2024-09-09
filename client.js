@@ -1,4 +1,4 @@
-const VERSION = "1.2.8";
+const VERSION = "1.2.9";
 console.log("Текущая версия: " + VERSION)
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
@@ -100,7 +100,7 @@ const getSystemInfo = () => {
     .split("\n")
     .filter(line => line.startsWith("total_rss"))[0]
     .split(" ")[1];
-  const ramPercent = Math.round((totalRss / 536870912) * 1000) / 30;
+  const ramPercent = Math.round((totalRss / 512) * 1000) / 10;
 
   return {
     MemoryUsagePercentage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
