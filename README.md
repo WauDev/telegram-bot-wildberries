@@ -18,7 +18,7 @@
 
 4. Запуск скрипта
 
-```node client.js```
+```node update.js```
 
 [Релизы бота]: https://github.com/WauDev/Oxygen/releases
 
